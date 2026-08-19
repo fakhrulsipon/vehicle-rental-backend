@@ -39,6 +39,7 @@
     "multer": "^2.2.0",
     "pg": "^8.23.0",
     "swagger-ui-express": "^5.0.1",
+    "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   },
   "devDependencies": {

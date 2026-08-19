@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import { VehicleRepository } from '../repositories/VehicleRepository';
 import { IVehicle, IVehicleFilters } from '../interfaces/types';
 

@@ -35,7 +35,8 @@ export class AuthService {
       { expiresIn: '24h' },
     );
 
-    const { password_hash, ...staffWithoutPassword } = staff;
+    const staffWithoutPassword: any = { ...staff };
+    delete staffWithoutPassword.password_hash;
 
     return {
       token,

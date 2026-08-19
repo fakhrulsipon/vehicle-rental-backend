@@ -8,9 +8,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "lint": "eslint src/",
-    "migrate:latest": "knex migrate:latest --knexfile src/knexfile.ts",
-    "migrate:rollback": "knex migrate:rollback --knexfile src/knexfile.ts",
-    "seed:run": "knex seed:run --knexfile src/knexfile.ts",
+    "migrate:latest": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "seed:run": "knex seed:run",
     "test": "jest --detectOpenHandles --passWithNoTests"
   },
   "keywords": [],

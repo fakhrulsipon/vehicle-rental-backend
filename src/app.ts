@@ -1,6 +1,8 @@
 import express, { Application, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerDocument } from './docs/swagger';
 import authRoutes from './routes/authRoutes';
 import vehicleRoutes from './routes/vehicleRoutes';
 import rentalRoutes from './routes/rentalRoutes';
@@ -18,10 +20,14 @@ app.use(express.urlencoded({ extended: true }));
 const uploadPath = process.env.UPLOAD_PATH || 'uploads';
 app.use(`/${uploadPath}`, express.static(path.join(__dirname, `../${uploadPath}`)));
 
+// Swagger API Docs
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Root Route
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
     message: 'Welcome to Vehicle Rental Management API',
+    documentation: '/api-docs',
     endpoints: {
       health: '/health',
       auth: '/auth/login',

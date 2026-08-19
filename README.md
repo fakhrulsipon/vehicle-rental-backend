@@ -4,6 +4,13 @@ A robust RESTful API built with **Node.js**, **TypeScript**, **Express**, **Knex
 
 ---
 
+## 🌐 Live Deployment Links
+
+- 🔗 **Live Production API**: [https://vehicle-rental-backend-tj9u.onrender.com](https://vehicle-rental-backend-tj9u.onrender.com)
+- 📑 **Interactive Swagger API Documentation**: [https://vehicle-rental-backend-tj9u.onrender.com/api-docs](https://vehicle-rental-backend-tj9u.onrender.com/api-docs)
+
+---
+
 ## 🚀 Key Features & Highlights
 
 - **Object-Oriented Architecture**: Clean separation of concerns following `Controller -> Service -> Repository` layers with dependency injection.
@@ -96,7 +103,8 @@ npm start
 ```
 
 API interactive documentation is accessible at:  
-👉 **`http://localhost:5000/api-docs`**
+👉 **Live Server**: [https://vehicle-rental-backend-tj9u.onrender.com/api-docs](https://vehicle-rental-backend-tj9u.onrender.com/api-docs)  
+👉 **Local Development**: `http://localhost:5000/api-docs`
 
 ---
 

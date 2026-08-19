@@ -10,7 +10,10 @@ export class AuthService {
     this.staffRepository = staffRepository;
   }
 
-  async login(email: string, password: string): Promise<{ token: string; staff: Omit<IStaff, 'password_hash'> }> {
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ token: string; staff: Omit<IStaff, 'password_hash'> }> {
     const staff = await this.staffRepository.findByEmail(email);
     if (!staff) {
       throw new Error('Invalid email or password');
@@ -29,7 +32,7 @@ export class AuthService {
         name: staff.name,
       },
       jwtSecret,
-      { expiresIn: '24h' }
+      { expiresIn: '24h' },
     );
 
     const { password_hash, ...staffWithoutPassword } = staff;

@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
 import db from '../config/database';
 import { StaffRepository } from '../repositories/StaffRepository';
 import { AuthService } from '../services/AuthService';
@@ -6,6 +7,15 @@ import { AuthController } from '../controllers/AuthController';
 import { loginSchema } from '../validations/authValidation';
 
 const router = Router();
+
+// Rate limiter for authentication login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: { message: 'Too many login attempts from this IP, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Dependency Injection Setup
 const staffRepository = new StaffRepository(db);
@@ -25,6 +35,6 @@ const validateBody = (schema: any) => {
 };
 
 // POST /auth/login
-router.post('/login', validateBody(loginSchema), authController.login);
+router.post('/login', loginLimiter, validateBody(loginSchema), authController.login);
 
 export default router;

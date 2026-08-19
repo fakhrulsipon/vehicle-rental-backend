@@ -3,7 +3,8 @@ export const swaggerDocument = {
   info: {
     title: 'Vehicle Rental Management API',
     version: '1.0.0',
-    description: 'Complete Backend API for Vehicle Rental System with Date Overlap Check & Monthly Reports',
+    description:
+      'Complete Backend API for Vehicle Rental System with Date Overlap Check & Monthly Reports',
   },
   servers: [
     {
@@ -52,16 +53,28 @@ export const swaggerDocument = {
         },
       },
     },
-    '/reports/monthly': {
+    '/reports/rentals': {
       get: {
-        summary: 'Generate Monthly Revenue & Overlap Report',
+        summary: 'Generate Monthly Revenue & Rental Activity Report per Vehicle',
         security: [{ bearerAuth: [] }],
         parameters: [
-          { name: 'year', in: 'query', required: true, schema: { type: 'integer', example: 2026 } },
-          { name: 'month', in: 'query', required: true, schema: { type: 'integer', example: 2 } },
+          {
+            name: 'month',
+            in: 'query',
+            required: true,
+            schema: { type: 'string', example: '2026-08' },
+            description: 'Target month in YYYY-MM format',
+          },
+          {
+            name: 'vehicle_id',
+            in: 'query',
+            required: false,
+            schema: { type: 'integer', example: 1 },
+            description: 'Optional vehicle ID filter',
+          },
         ],
         responses: {
-          '200': { description: 'Monthly report data' },
+          '200': { description: 'Monthly report data per vehicle and top revenue vehicle' },
           '401': { description: 'Unauthorized' },
         },
       },

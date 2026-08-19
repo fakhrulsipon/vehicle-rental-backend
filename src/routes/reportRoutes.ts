@@ -26,6 +26,7 @@ const validateQuery = (schema: any) => {
 // All report routes protected by JWT
 router.use(authenticateJWT);
 
-router.get('/monthly', validateQuery(monthlyReportQuerySchema), reportController.getMonthlyReport);
+// GET /reports/rentals?month=YYYY-MM&vehicle_id=
+router.get('/rentals', validateQuery(monthlyReportQuerySchema), reportController.getMonthlyReport);
 
 export default router;

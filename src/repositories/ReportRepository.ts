@@ -1,20 +1,23 @@
 import { Knex } from 'knex';
 
 export interface IMonthlyReportParams {
-  year: number;
-  month: number;
+  month: string; // YYYY-MM
+  vehicle_id?: number;
+}
+
+export interface IVehicleReportItem {
+  id: number;
+  name: string;
+  plate_number: string;
+  total_bookings: number;
+  days_rented: number;
+  revenue: number;
 }
 
 export interface IMonthlyReportResult {
-  total_rentals: number;
-  total_days_booked: number;
-  total_revenue: number;
-  highest_revenue_vehicle: {
-    vehicle_id: number | null;
-    registration_number: string | null;
-    model: string | null;
-    revenue: number;
-  } | null;
+  month: string;
+  vehicles: IVehicleReportItem[];
+  highest_revenue_vehicle: IVehicleReportItem | null;
 }
 
 export class ReportRepository {
@@ -24,111 +27,132 @@ export class ReportRepository {
     this.knex = knex;
   }
 
-  async getMonthlyReport({ year, month }: IMonthlyReportParams): Promise<IMonthlyReportResult> {
-    // Calculate month boundary dates (YYYY-MM-DD)
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    
-    // Last day of the requested month
-    const lastDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+  async getMonthlyReport({
+    month,
+    vehicle_id,
+  }: IMonthlyReportParams): Promise<IMonthlyReportResult> {
+    const [yearStr, monthNumStr] = month.split('-');
+    const year = parseInt(yearStr, 10);
+    const monthNum = parseInt(monthNumStr, 10);
 
-    /**
-     * PostgreSQL/MySQL SQL Engine:
-     * Overlapped start date = GREATEST(rental.start_date, month_start)
-     * Overlapped end date   = LEAST(rental.end_date, month_end)
-     * Days in month         = (Overlapped end date - Overlapped start date) + 1
-     * Revenue in month      = Days in month * vehicle.daily_rate
-     */
-    const rawQuery = `
-      SELECT 
-        r.id as rental_id,
-        r.vehicle_id,
-        v.registration_number,
-        v.model,
-        v.daily_rate,
-        (
-          GREATEST(r.start_date, ?::date)
-        ) as clamped_start,
-        (
-          LEAST(r.end_date, ?::date)
-        ) as clamped_end,
-        (
-          LEAST(r.end_date, ?::date) - GREATEST(r.start_date, ?::date) + 1
-        ) as days_in_month,
-        (
-          (LEAST(r.end_date, ?::date) - GREATEST(r.start_date, ?::date) + 1) * v.daily_rate
-        ) as monthly_revenue
-      FROM rentals r
-      JOIN vehicles v ON r.vehicle_id = v.id
-      WHERE r.status IN ('booked', 'ongoing', 'completed')
-        AND r.start_date <= ?::date
-        AND r.end_date >= ?::date
-    `;
+    const monthStartStr = `${year}-${String(monthNum).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, monthNum, 0).getDate();
+    const monthEndStr = `${year}-${String(monthNum).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-    const rentalsInMonth = await this.knex.raw(rawQuery, [
-      startDate,
-      endDate,
-      endDate,
-      startDate,
-      endDate,
-      startDate,
-      endDate,
-      startDate,
-    ]);
+    // 1. Fetch vehicles (active / non-deleted)
+    const vehicleQuery = this.knex('vehicles').whereNull('deleted_at');
+    if (vehicle_id) {
+      vehicleQuery.where('id', vehicle_id);
+    }
+    const vehiclesList = await vehicleQuery.select('id', 'name', 'plate_number', 'daily_rate');
 
-    const rows = rentalsInMonth.rows || rentalsInMonth[0] || [];
-
-    if (rows.length === 0) {
+    if (vehiclesList.length === 0) {
       return {
-        total_rentals: 0,
-        total_days_booked: 0,
-        total_revenue: 0,
+        month,
+        vehicles: [],
         highest_revenue_vehicle: null,
       };
     }
 
-    let totalRevenue = 0;
-    let totalDaysBooked = 0;
-    const vehicleRevenueMap: Record<number, { registration_number: string; model: string; revenue: number }> = {};
+    // 2. Query active rentals overlapping the month using raw SQL
+    const bindings: any[] = [monthStartStr, monthEndStr];
+    let rawQuery = `
+      SELECT 
+        r.id as rental_id,
+        r.vehicle_id,
+        r.start_date,
+        r.end_date,
+        r.status,
+        v.daily_rate
+      FROM rentals r
+      JOIN vehicles v ON r.vehicle_id = v.id
+      WHERE r.status != 'cancelled'
+        AND r.start_date <= ?
+        AND r.end_date >= ?
+    `;
 
-    for (const row of rows) {
-      const days = Number(row.days_in_month);
-      const revenue = Number(row.monthly_revenue);
-
-      totalDaysBooked += days;
-      totalRevenue += revenue;
-
-      if (!vehicleRevenueMap[row.vehicle_id]) {
-        vehicleRevenueMap[row.vehicle_id] = {
-          registration_number: row.registration_number,
-          model: row.model,
-          revenue: 0,
-        };
-      }
-
-      vehicleRevenueMap[row.vehicle_id].revenue += revenue;
+    if (vehicle_id) {
+      rawQuery += ` AND r.vehicle_id = ?`;
+      bindings.push(vehicle_id);
     }
 
-    // Find highest revenue vehicle
-    let highestVehicle = null;
-    let maxRevenue = -1;
+    const rawResult = await this.knex.raw(rawQuery, bindings);
+    const rentalRows = rawResult.rows || rawResult[0] || rawResult;
 
-    for (const [vehicleId, data] of Object.entries(vehicleRevenueMap)) {
-      if (data.revenue > maxRevenue) {
-        maxRevenue = data.revenue;
-        highestVehicle = {
-          vehicle_id: Number(vehicleId),
-          registration_number: data.registration_number,
-          model: data.model,
-          revenue: Number(data.revenue.toFixed(2)),
-        };
+    // Map to aggregate stats per vehicle
+    const vehicleStatsMap: Record<
+      number,
+      { total_bookings: number; days_rented: number; revenue: number }
+    > = {};
+
+    for (const v of vehiclesList) {
+      vehicleStatsMap[v.id] = { total_bookings: 0, days_rented: 0, revenue: 0 };
+    }
+
+    if (Array.isArray(rentalRows)) {
+      for (const row of rentalRows) {
+        const vId = Number(row.vehicle_id);
+        if (!vehicleStatsMap[vId]) {
+          vehicleStatsMap[vId] = { total_bookings: 0, days_rented: 0, revenue: 0 };
+        }
+
+        // Format dates as YYYY-MM-DD string
+        const rStart =
+          typeof row.start_date === 'string'
+            ? row.start_date.split('T')[0]
+            : new Date(row.start_date).toISOString().split('T')[0];
+        const rEnd =
+          typeof row.end_date === 'string'
+            ? row.end_date.split('T')[0]
+            : new Date(row.end_date).toISOString().split('T')[0];
+
+        // Clamp dates inside the requested month
+        const clampedStartStr = rStart < monthStartStr ? monthStartStr : rStart;
+        const clampedEndStr = rEnd > monthEndStr ? monthEndStr : rEnd;
+
+        const startDateObj = new Date(clampedStartStr);
+        const endDateObj = new Date(clampedEndStr);
+        const diffTime = Math.abs(endDateObj.getTime() - startDateObj.getTime());
+        const daysInMonth = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+        const dailyRate = Number(row.daily_rate);
+        const revenueInMonth = Number((daysInMonth * dailyRate).toFixed(2));
+
+        vehicleStatsMap[vId].total_bookings += 1;
+        vehicleStatsMap[vId].days_rented += daysInMonth;
+        vehicleStatsMap[vId].revenue = Number(
+          (vehicleStatsMap[vId].revenue + revenueInMonth).toFixed(2),
+        );
+      }
+    }
+
+    // Build vehicle report array
+    const vehiclesReport: IVehicleReportItem[] = vehiclesList.map((v) => {
+      const stats = vehicleStatsMap[v.id] || { total_bookings: 0, days_rented: 0, revenue: 0 };
+      return {
+        id: Number(v.id),
+        name: v.name,
+        plate_number: v.plate_number,
+        total_bookings: stats.total_bookings,
+        days_rented: stats.days_rented,
+        revenue: stats.revenue,
+      };
+    });
+
+    // Find highest revenue vehicle
+    let highestVehicle: IVehicleReportItem | null = null;
+    let maxRevenue = 0;
+
+    for (const vItem of vehiclesReport) {
+      if (vItem.revenue > maxRevenue) {
+        maxRevenue = vItem.revenue;
+        highestVehicle = vItem;
       }
     }
 
     return {
-      total_rentals: rows.length,
-      total_days_booked: totalDaysBooked,
-      total_revenue: Number(totalRevenue.toFixed(2)),
+      month,
+      vehicles: vehiclesReport,
       highest_revenue_vehicle: highestVehicle,
     };
   }

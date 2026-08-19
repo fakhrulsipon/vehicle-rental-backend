@@ -17,11 +17,11 @@ export class RentalRepository extends BaseRepository<IRental> {
     startDate: string,
     endDate: string,
     excludeRentalId?: number,
-    trx?: Knex.Transaction
+    trx?: Knex.Transaction,
   ): Promise<boolean> {
     const query = (trx ? trx(this.tableName) : this.knex(this.tableName))
       .where({ vehicle_id: vehicleId })
-      .whereIn('status', ['booked', 'ongoing'])
+      .whereNot('status', 'cancelled')
       .where('start_date', '<=', endDate)
       .where('end_date', '>=', startDate);
 
@@ -33,7 +33,9 @@ export class RentalRepository extends BaseRepository<IRental> {
     return !!existingRental;
   }
 
-  async findAllWithFilters(filters: IRentalFilters): Promise<{ data: IRental[]; total: number; page: number; limit: number }> {
+  async findAllWithFilters(
+    filters: IRentalFilters,
+  ): Promise<{ data: IRental[]; total: number; page: number; limit: number }> {
     const page = filters.page && filters.page > 0 ? Number(filters.page) : 1;
     const limit = filters.limit && filters.limit > 0 ? Number(filters.limit) : 10;
     const offset = (page - 1) * limit;

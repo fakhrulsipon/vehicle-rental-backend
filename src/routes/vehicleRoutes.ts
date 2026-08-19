@@ -30,8 +30,18 @@ router.use(authenticateJWT);
 
 router.get('/', vehicleController.getAllVehicles);
 router.get('/:id', vehicleController.getVehicleById);
-router.post('/', upload.single('photo'), validateBody(createVehicleSchema), vehicleController.createVehicle);
-router.put('/:id', upload.single('photo'), validateBody(updateVehicleSchema), vehicleController.updateVehicle);
+router.post(
+  '/',
+  upload.single('photo'),
+  validateBody(createVehicleSchema),
+  vehicleController.createVehicle,
+);
+router.put(
+  '/:id',
+  upload.single('photo'),
+  validateBody(updateVehicleSchema),
+  vehicleController.updateVehicle,
+);
 router.delete('/:id', vehicleController.deleteVehicle);
 
 export default router;

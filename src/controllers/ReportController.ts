@@ -10,15 +10,13 @@ export class ReportController {
 
   getMonthlyReport = async (req: Request, res: Response): Promise<void> => {
     try {
-      const year = Number(req.query.year);
-      const month = Number(req.query.month);
+      const month = req.query.month as string;
+      const vehicle_id = req.query.vehicle_id ? Number(req.query.vehicle_id) : undefined;
 
-      const report = await this.reportService.generateMonthlyReport({ year, month });
+      const report = await this.reportService.generateMonthlyReport({ month, vehicle_id });
 
       res.status(200).json({
-        message: 'Monthly report generated successfully',
-        year,
-        month,
+        message: 'Monthly rental report generated successfully',
         data: report,
       });
     } catch (error: any) {

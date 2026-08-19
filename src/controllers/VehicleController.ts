@@ -36,7 +36,10 @@ export class VehicleController {
         data: vehicle,
       });
     } catch (error: any) {
-      res.status(440).status(error.message === 'Vehicle not found' ? 404 : 400).json({ message: error.message });
+      res
+        .status(440)
+        .status(error.message === 'Vehicle not found' ? 404 : 400)
+        .json({ message: error.message });
     }
   };
 
@@ -50,7 +53,7 @@ export class VehicleController {
           category,
           daily_rate: Number(daily_rate),
         },
-        req.file
+        req.file,
       );
 
       res.status(201).json({
@@ -93,7 +96,9 @@ export class VehicleController {
         message: 'Vehicle soft deleted successfully',
       });
     } catch (error: any) {
-      res.status(error.message === 'Vehicle not found' ? 404 : 400).json({ message: error.message });
+      res
+        .status(error.message === 'Vehicle not found' ? 404 : 400)
+        .json({ message: error.message });
     }
   };
 }

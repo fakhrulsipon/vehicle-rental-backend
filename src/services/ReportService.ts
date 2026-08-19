@@ -1,4 +1,8 @@
-import { ReportRepository, IMonthlyReportParams, IMonthlyReportResult } from '../repositories/ReportRepository';
+import {
+  ReportRepository,
+  IMonthlyReportParams,
+  IMonthlyReportResult,
+} from '../repositories/ReportRepository';
 
 export class ReportService {
   private reportRepository: ReportRepository;

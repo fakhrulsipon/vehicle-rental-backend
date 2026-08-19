@@ -32,44 +32,57 @@ export class RentalService {
     return rental;
   }
 
-  async createRental(rentalData: Omit<IRental, 'id' | 'total_amount'>, trx?: Knex.Transaction): Promise<IRental> {
-    const vehicle = await this.vehicleRepository.findActiveById(rentalData.vehicle_id);
-    if (!vehicle) {
-      throw new Error('Vehicle not found or inactive');
+  async createRental(
+    rentalData: Omit<IRental, 'id' | 'total_amount'>,
+    externalTrx?: Knex.Transaction,
+  ): Promise<IRental> {
+    const executeInTransaction = async (trx: Knex.Transaction) => {
+      const vehicle = await this.vehicleRepository.findActiveById(rentalData.vehicle_id);
+      if (!vehicle) {
+        throw new Error('Vehicle not found or inactive');
+      }
+
+      const formattedStart = new Date(rentalData.start_date).toISOString().split('T')[0];
+      const formattedEnd = new Date(rentalData.end_date).toISOString().split('T')[0];
+
+      // Overlap Check Engine inside Transaction
+      const isOverlapping = await this.rentalRepository.checkOverlap(
+        rentalData.vehicle_id,
+        formattedStart,
+        formattedEnd,
+        undefined,
+        trx,
+      );
+
+      if (isOverlapping) {
+        const error: any = new Error(
+          'Vehicle already has an active rental overlapping these dates',
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+
+      // Server-side Total Amount Calculation
+      const days = this.calculateDays(formattedStart, formattedEnd);
+      const total_amount = Number((days * Number(vehicle.daily_rate)).toFixed(2));
+
+      return await this.rentalRepository.create(
+        {
+          ...rentalData,
+          start_date: formattedStart,
+          end_date: formattedEnd,
+          total_amount,
+          status: rentalData.status || 'booked',
+        },
+        trx,
+      );
+    };
+
+    if (externalTrx) {
+      return await executeInTransaction(externalTrx);
+    } else {
+      return await this.rentalRepository.getKnex().transaction(executeInTransaction);
     }
-
-    const formattedStart = new Date(rentalData.start_date).toISOString().split('T')[0];
-    const formattedEnd = new Date(rentalData.end_date).toISOString().split('T')[0];
-
-    // Overlap Check Engine
-    const isOverlapping = await this.rentalRepository.checkOverlap(
-      rentalData.vehicle_id,
-      formattedStart,
-      formattedEnd,
-      undefined,
-      trx
-    );
-
-    if (isOverlapping) {
-      const error: any = new Error('Vehicle already has an active rental overlapping these dates');
-      error.statusCode = 409;
-      throw error;
-    }
-
-    // Server-side Total Amount Calculation
-    const days = this.calculateDays(formattedStart, formattedEnd);
-    const total_amount = Number((days * Number(vehicle.daily_rate)).toFixed(2));
-
-    return await this.rentalRepository.create(
-      {
-        ...rentalData,
-        start_date: formattedStart,
-        end_date: formattedEnd,
-        total_amount,
-        status: rentalData.status || 'booked',
-      },
-      trx
-    );
   }
 
   async updateRental(id: number, updateData: Partial<IRental>): Promise<IRental> {
@@ -89,7 +102,12 @@ export class RentalService {
 
     // Date changes re-trigger overlap check
     if (updateData.start_date || updateData.end_date) {
-      const isOverlapping = await this.rentalRepository.checkOverlap(vehicleId, startDate, endDate, id);
+      const isOverlapping = await this.rentalRepository.checkOverlap(
+        vehicleId,
+        startDate,
+        endDate,
+        id,
+      );
       if (isOverlapping) {
         const error: any = new Error('Updated dates conflict with an existing active rental');
         error.statusCode = 409;

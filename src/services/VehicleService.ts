@@ -22,7 +22,10 @@ export class VehicleService {
     return vehicle;
   }
 
-  async createVehicle(vehicleData: Omit<IVehicle, 'id'>, file?: Express.Multer.File): Promise<IVehicle> {
+  async createVehicle(
+    vehicleData: Omit<IVehicle, 'id'>,
+    file?: Express.Multer.File,
+  ): Promise<IVehicle> {
     const existingPlate = await this.vehicleRepository.findByPlateNumber(vehicleData.plate_number);
     if (existingPlate) {
       if (file && fs.existsSync(file.path)) {
@@ -39,7 +42,11 @@ export class VehicleService {
     });
   }
 
-  async updateVehicle(id: number, vehicleData: Partial<IVehicle>, file?: Express.Multer.File): Promise<IVehicle> {
+  async updateVehicle(
+    id: number,
+    vehicleData: Partial<IVehicle>,
+    file?: Express.Multer.File,
+  ): Promise<IVehicle> {
     const existingVehicle = await this.vehicleRepository.findActiveById(id);
     if (!existingVehicle) {
       if (file && fs.existsSync(file.path)) {
@@ -49,7 +56,9 @@ export class VehicleService {
     }
 
     if (vehicleData.plate_number && vehicleData.plate_number !== existingVehicle.plate_number) {
-      const duplicatePlate = await this.vehicleRepository.findByPlateNumber(vehicleData.plate_number);
+      const duplicatePlate = await this.vehicleRepository.findByPlateNumber(
+        vehicleData.plate_number,
+      );
       if (duplicatePlate) {
         if (file && fs.existsSync(file.path)) {
           fs.unlinkSync(file.path);

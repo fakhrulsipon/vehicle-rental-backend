@@ -20,7 +20,9 @@ export abstract class BaseRepository<T extends { id?: number }> {
   }
 
   async create(item: Omit<T, 'id'>, trx?: Knex.Transaction): Promise<T> {
-    const query = this.knex(this.tableName).insert(item as any).returning('*');
+    const query = this.knex(this.tableName)
+      .insert(item as any)
+      .returning('*');
     if (trx) {
       query.transacting(trx);
     }
@@ -43,5 +45,9 @@ export abstract class BaseRepository<T extends { id?: number }> {
   async delete(id: number): Promise<boolean> {
     const rowsAffected = await this.knex(this.tableName).where({ id }).del();
     return rowsAffected > 0;
+  }
+
+  getKnex(): Knex {
+    return this.knex;
   }
 }

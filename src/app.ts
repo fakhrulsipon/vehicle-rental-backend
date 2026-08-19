@@ -33,7 +33,7 @@ app.get('/', (req: Request, res: Response) => {
       auth: '/auth/login',
       vehicles: '/vehicles',
       rentals: '/rentals',
-      reports: '/reports/monthly',
+      reports: '/reports/rentals',
     },
   });
 });

@@ -16,14 +16,13 @@ export class VehicleRepository extends BaseRepository<IVehicle> {
   }
 
   async findActiveById(id: number): Promise<IVehicle | undefined> {
-    const row = await this.knex(this.tableName)
-      .where({ id })
-      .whereNull('deleted_at')
-      .first();
+    const row = await this.knex(this.tableName).where({ id }).whereNull('deleted_at').first();
     return row as unknown as IVehicle | undefined;
   }
 
-  async findAllActive(filters: IVehicleFilters): Promise<{ data: IVehicle[]; total: number; page: number; limit: number }> {
+  async findAllActive(
+    filters: IVehicleFilters,
+  ): Promise<{ data: IVehicle[]; total: number; page: number; limit: number }> {
     const page = filters.page && filters.page > 0 ? Number(filters.page) : 1;
     const limit = filters.limit && filters.limit > 0 ? Number(filters.limit) : 10;
     const offset = (page - 1) * limit;
@@ -31,11 +30,11 @@ export class VehicleRepository extends BaseRepository<IVehicle> {
     const query = this.knex(this.tableName).whereNull('deleted_at');
 
     if (filters.category) {
-      query.where('category', 'ILIKE', `%${filters.category}%`);
+      query.whereRaw('LOWER(category) LIKE LOWER(?)', [`%${filters.category}%`]);
     }
 
     if (filters.search) {
-      query.where('name', 'ILIKE', `%${filters.search}%`);
+      query.whereRaw('LOWER(name) LIKE LOWER(?)', [`%${filters.search}%`]);
     }
 
     const [{ count }] = await query.clone().count('id as count');

@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
 import vehicleRoutes from './routes/vehicleRoutes';
+import rentalRoutes from './routes/rentalRoutes';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.get('/', (req: Request, res: Response) => {
       health: '/health',
       auth: '/auth/login',
       vehicles: '/vehicles',
+      rentals: '/rentals',
     },
   });
 });
@@ -36,5 +38,6 @@ app.get('/health', (req: Request, res: Response) => {
 // API Routes
 app.use('/auth', authRoutes);
 app.use('/vehicles', vehicleRoutes);
+app.use('/rentals', rentalRoutes);
 
 export default app;

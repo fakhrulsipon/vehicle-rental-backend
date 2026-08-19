@@ -1,8 +1,8 @@
-
 import express, { Application, Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import authRoutes from './routes/authRoutes';
+import vehicleRoutes from './routes/vehicleRoutes';
 
 dotenv.config();
 
@@ -23,6 +23,7 @@ app.get('/', (req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       auth: '/auth/login',
+      vehicles: '/vehicles',
     },
   });
 });
@@ -34,5 +35,6 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API Routes
 app.use('/auth', authRoutes);
+app.use('/vehicles', vehicleRoutes);
 
 export default app;

@@ -4,6 +4,7 @@ import path from 'path';
 import authRoutes from './routes/authRoutes';
 import vehicleRoutes from './routes/vehicleRoutes';
 import rentalRoutes from './routes/rentalRoutes';
+import reportRoutes from './routes/reportRoutes';
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.get('/', (req: Request, res: Response) => {
       auth: '/auth/login',
       vehicles: '/vehicles',
       rentals: '/rentals',
+      reports: '/reports/monthly',
     },
   });
 });
@@ -39,5 +41,6 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/auth', authRoutes);
 app.use('/vehicles', vehicleRoutes);
 app.use('/rentals', rentalRoutes);
+app.use('/reports', reportRoutes);
 
 export default app;

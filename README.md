@@ -91,6 +91,7 @@ npm run seed:run
 
 ## 🏃 Running the Application
 
+### Option A: Local Node.js Development
 ```bash
 # Development mode with hot-reload
 npm run dev
@@ -100,6 +101,23 @@ npm run build
 
 # Start production server
 npm start
+```
+
+### Option B: Docker Compose (Recommended)
+Run the complete application stack (Node.js API + PostgreSQL Database) in an isolated containerized environment without installing PostgreSQL locally:
+
+```bash
+# Build and launch Node.js API & PostgreSQL database
+docker-compose up -d --build
+
+# Run Knex database migrations inside Docker
+docker-compose exec app npm run migrate:latest
+
+# Run database seeds inside Docker
+docker-compose exec app npm run seed:run
+
+# Stop containers
+docker-compose down
 ```
 
 API interactive documentation is accessible at:  

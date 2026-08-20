@@ -56,16 +56,21 @@ Configure your `.env` variables:
 PORT=5000
 NODE_ENV=development
 
-# Database Settings
+# Local PostgreSQL Configuration
 DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=vehicle_rental_db
 
-# Security & Uploads
+# Optional Cloud PostgreSQL Connection String (e.g. Neon, Render, Supabase)
+# DATABASE_URL=postgresql://user:password@host:5432/dbname?sslmode=require
+
+# Authentication & JWT
 JWT_SECRET=super_secret_jwt_key_vehicle_rental_2026
 JWT_EXPIRES_IN=1d
+
+# File Storage Path
 UPLOAD_PATH=uploads
 ```
 

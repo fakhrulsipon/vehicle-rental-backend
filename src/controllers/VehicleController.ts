@@ -37,7 +37,6 @@ export class VehicleController {
       });
     } catch (error: any) {
       res
-        .status(440)
         .status(error.message === 'Vehicle not found' ? 404 : 400)
         .json({ message: error.message });
     }

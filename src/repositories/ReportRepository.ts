@@ -55,7 +55,8 @@ export class ReportRepository {
     }
 
     // 2. Query active rentals overlapping the month using raw SQL
-    const bindings: any[] = [monthStartStr, monthEndStr];
+    // Range A (rental) overlaps Range B (month) iff start_date <= monthEndStr AND end_date >= monthStartStr
+    const bindings: any[] = [monthEndStr, monthStartStr];
     let rawQuery = `
       SELECT 
         r.id as rental_id,
@@ -79,6 +80,25 @@ export class ReportRepository {
     const rawResult = await this.knex.raw(rawQuery, bindings);
     const rentalRows = rawResult.rows || rawResult[0] || rawResult;
 
+    // Helper for formatting date without local timezone offset shifting
+    const formatDateStr = (date: any): string => {
+      if (typeof date === 'string') {
+        return date.split('T')[0];
+      }
+      if (date instanceof Date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      return String(date);
+    };
+
+    const parseUTCDate = (dateStr: string): number => {
+      const [y, m, d] = dateStr.split('-').map((num) => parseInt(num, 10));
+      return Date.UTC(y, m - 1, d);
+    };
+
     // Map to aggregate stats per vehicle
     const vehicleStatsMap: Record<
       number,
@@ -97,23 +117,17 @@ export class ReportRepository {
         }
 
         // Format dates as YYYY-MM-DD string
-        const rStart =
-          typeof row.start_date === 'string'
-            ? row.start_date.split('T')[0]
-            : new Date(row.start_date).toISOString().split('T')[0];
-        const rEnd =
-          typeof row.end_date === 'string'
-            ? row.end_date.split('T')[0]
-            : new Date(row.end_date).toISOString().split('T')[0];
+        const rStart = formatDateStr(row.start_date);
+        const rEnd = formatDateStr(row.end_date);
 
         // Clamp dates inside the requested month
         const clampedStartStr = rStart < monthStartStr ? monthStartStr : rStart;
         const clampedEndStr = rEnd > monthEndStr ? monthEndStr : rEnd;
 
-        const startDateObj = new Date(clampedStartStr);
-        const endDateObj = new Date(clampedEndStr);
-        const diffTime = Math.abs(endDateObj.getTime() - startDateObj.getTime());
-        const daysInMonth = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const daysInMonth =
+          Math.round(
+            (parseUTCDate(clampedEndStr) - parseUTCDate(clampedStartStr)) / (1000 * 60 * 60 * 24),
+          ) + 1;
 
         const dailyRate = Number(row.daily_rate);
         const revenueInMonth = Number((daysInMonth * dailyRate).toFixed(2));

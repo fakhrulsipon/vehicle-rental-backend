@@ -12,11 +12,25 @@ export class RentalService {
     this.vehicleRepository = vehicleRepository;
   }
 
+  private formatDateStr(date: string | Date): string {
+    if (typeof date === 'string') {
+      return date.split('T')[0];
+    }
+    if (date instanceof Date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return String(date);
+  }
+
   private calculateDays(startDate: string, endDate: string): number {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const [sY, sM, sD] = startDate.split('-').map((n) => parseInt(n, 10));
+    const [eY, eM, eD] = endDate.split('-').map((n) => parseInt(n, 10));
+    const startMs = Date.UTC(sY, sM - 1, sD);
+    const endMs = Date.UTC(eY, eM - 1, eD);
+    const diffDays = Math.round((endMs - startMs) / (1000 * 60 * 60 * 24));
     return diffDays === 0 ? 1 : diffDays + 1; // Same start/end date counts as 1 day
   }
 
@@ -42,8 +56,14 @@ export class RentalService {
         throw new Error('Vehicle not found or inactive');
       }
 
-      const formattedStart = new Date(rentalData.start_date).toISOString().split('T')[0];
-      const formattedEnd = new Date(rentalData.end_date).toISOString().split('T')[0];
+      const formattedStart = this.formatDateStr(rentalData.start_date);
+      const formattedEnd = this.formatDateStr(rentalData.end_date);
+
+      if (formattedStart > formattedEnd) {
+        const error: any = new Error('End date must be equal to or after start date');
+        error.statusCode = 400;
+        throw error;
+      }
 
       // Overlap Check Engine inside Transaction
       const isOverlapping = await this.rentalRepository.checkOverlap(
@@ -92,11 +112,17 @@ export class RentalService {
     }
 
     const startDate = updateData.start_date
-      ? new Date(updateData.start_date).toISOString().split('T')[0]
-      : existingRental.start_date;
+      ? this.formatDateStr(updateData.start_date)
+      : this.formatDateStr(existingRental.start_date);
     const endDate = updateData.end_date
-      ? new Date(updateData.end_date).toISOString().split('T')[0]
-      : existingRental.end_date;
+      ? this.formatDateStr(updateData.end_date)
+      : this.formatDateStr(existingRental.end_date);
+
+    if (startDate > endDate) {
+      const error: any = new Error('End date must be equal to or after start date');
+      error.statusCode = 400;
+      throw error;
+    }
 
     const vehicleId = existingRental.vehicle_id;
 

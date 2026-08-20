@@ -30,5 +30,6 @@ const dbConfig = {
 
 module.exports = {
   development: dbConfig,
+  test: dbConfig,
   production: dbConfig,
 };

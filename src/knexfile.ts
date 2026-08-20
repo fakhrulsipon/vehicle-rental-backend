@@ -34,6 +34,7 @@ const dbConfig: Knex.Config = {
 
 const config: { [key: string]: Knex.Config } = {
   development: dbConfig,
+  test: dbConfig,
   production: dbConfig,
 };
 
